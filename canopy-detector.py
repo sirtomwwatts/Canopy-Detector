@@ -122,16 +122,14 @@ if uploaded_file is not None:
     )
 
     # -------------------------
-    # Display metrics
+    # Metrics
     # -------------------------
     st.metric("🌳 Canopy", f"{canopy:.2f}%")
     st.metric("☁️ Sky", f"{sky:.2f}%")
 
     # -------------------------
-    # NOW results dataframe (must be inside!)
+    # Results table
     # -------------------------
-    import pandas as pd
-
     results = pd.DataFrame(
         {
             "Metric": ["Canopy (%)", "Sky (%)", "Threshold"],
@@ -145,43 +143,39 @@ if uploaded_file is not None:
 
     st.dataframe(results)
 
+    # -------------------------
+    # DOWNLOADS (MUST BE INSIDE)
+    # -------------------------
+
     csv = results.to_csv(index=False).encode("utf-8")
 
-st.download_button(
-    label="📄 Download Results (CSV)",
-    data=csv,
-    file_name="canopy_results.csv",
-    mime="text/csv",
-)
+    st.download_button(
+        label="📄 Download Results (CSV)",
+        data=csv,
+        file_name="canopy_results.csv",
+        mime="text/csv",
+    )
 
-# ------------------------
-# Overlay image
-# ------------------------
+    # Overlay image
+    overlay_pil = Image.fromarray(overlay)
+    overlay_buffer = io.BytesIO()
+    overlay_pil.save(overlay_buffer, format="PNG")
 
-overlay_pil = Image.fromarray(overlay)
+    st.download_button(
+        label="🌳 Download Canopy Overlay",
+        data=overlay_buffer.getvalue(),
+        file_name="canopy_overlay.png",
+        mime="image/png",
+    )
 
-overlay_buffer = io.BytesIO()
-overlay_pil.save(overlay_buffer, format="PNG")
+    # Binary image
+    binary_pil = Image.fromarray(binary)
+    binary_buffer = io.BytesIO()
+    binary_pil.save(binary_buffer, format="PNG")
 
-st.download_button(
-    label="🌳 Download Canopy Overlay",
-    data=overlay_buffer.getvalue(),
-    file_name="canopy_overlay.png",
-    mime="image/png",
-)
-
-# ------------------------
-# Binary image
-# ------------------------
-
-binary_pil = Image.fromarray(binary)
-
-binary_buffer = io.BytesIO()
-binary_pil.save(binary_buffer, format="PNG")
-
-st.download_button(
-    label="⚫ Download Binary Image",
-    data=binary_buffer.getvalue(),
-    file_name="binary_image.png",
-    mime="image/png",
-)
+    st.download_button(
+        label="⚫ Download Binary Image",
+        data=binary_buffer.getvalue(),
+        file_name="binary_image.png",
+        mime="image/png",
+    )
