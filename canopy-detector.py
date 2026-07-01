@@ -101,6 +101,11 @@ uploaded_file = st.file_uploader(
     type=["jpg", "jpeg", "png", "tif", "tiff"],
 )
 
+uploaded_file = st.file_uploader(
+    "Choose an image",
+    type=["jpg", "jpeg", "png", "tif", "tiff"],
+)
+
 if uploaded_file is not None:
 
     image = Image.open(uploaded_file).convert("RGB")
@@ -122,46 +127,20 @@ if uploaded_file is not None:
     )
 
     # -------------------------
-    # Metrics
+    # VISUALS
     # -------------------------
-    st.metric("🌳 Canopy", f"{canopy:.2f}%")
-    st.metric("☁️ Sky", f"{sky:.2f}%")
 
-    # -------------------------
-    # Results table
-    # -------------------------
-    results = pd.DataFrame(
-        {
-            "Metric": ["Canopy (%)", "Sky (%)", "Threshold"],
-            "Value": [
-                round(canopy, 2),
-                round(sky, 2),
-                round(float(used_threshold), 1),
-            ],
-        }
-    )
+    st.subheader("Visualisation")
 
-    st.dataframe(results)
+    col1, col2 = st.columns(2)
 
-# -------------------------
-# DISPLAY IMAGES SIDE BY SIDE
-# -------------------------
+    with col1:
+        st.image(image, caption="Original Image", width="stretch")
 
-st.subheader("Visualisation")
+    with col2:
+        st.image(binary, caption="Binary Mask", width="stretch")
 
-col1, col2 = st.columns(2)
-
-with col1:
-    st.image(image, caption="Original Image", use_container_width=True)
-
-with col2:
-    st.image(binary, caption="Binary Canopy Mask", use_container_width=True)
-
-# -------------------------
-# OVERLAY VIEW (FULL WIDTH)
-# -------------------------
-
-st.image(overlay, caption="Canopy Overlay (Green = Vegetation)", use_container_width=True)
+    st.image(overlay, caption="Canopy Overlay", width="stretch")
 
 # -------------------------
 # DOWNLOAD SECTION
