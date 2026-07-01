@@ -160,11 +160,7 @@ st.subheader("Download Results")
 
 results = pd.DataFrame(
     {
-        "Metric": [
-            "Canopy (%)",
-            "Sky (%)",
-            "Threshold",
-        ],
+        "Metric": ["Canopy (%)", "Sky (%)", "Threshold"],
         "Value": [
             round(canopy, 2),
             round(sky, 2),
