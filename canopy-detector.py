@@ -145,7 +145,7 @@ if uploaded_file is not None:
 
     st.dataframe(results)
 
-csv = results.to_csv(index=False).encode("utf-8")
+    csv = results.to_csv(index=False).encode("utf-8")
 
 st.download_button(
     label="📄 Download Results (CSV)",
