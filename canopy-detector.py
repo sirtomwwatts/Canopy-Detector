@@ -106,68 +106,44 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
     image = np.array(image)
 
-    st.sidebar.header("Settings")
-
     method = st.sidebar.radio(
         "Threshold Method",
         ["Otsu (Automatic)", "Manual"],
     )
 
     if method == "Manual":
-        threshold = st.sidebar.slider(
-            "Threshold",
-            min_value=0,
-            max_value=255,
-            value=220,
-        )
+        threshold = st.sidebar.slider("Threshold", 0, 255, 220)
     else:
         threshold = "otsu"
 
-    (
-        canopy,
-        sky,
-        binary,
-        overlay,
-        used_threshold,
-    ) = calculate_canopy_cover(image, threshold)
+    canopy, sky, binary, overlay, used_threshold = calculate_canopy_cover(
+        image,
+        threshold
+    )
 
-    st.subheader("Results")
+    # -------------------------
+    # Display metrics
+    # -------------------------
+    st.metric("🌳 Canopy", f"{canopy:.2f}%")
+    st.metric("☁️ Sky", f"{sky:.2f}%")
 
-    col1, col2, col3 = st.columns(3)
+    # -------------------------
+    # NOW results dataframe (must be inside!)
+    # -------------------------
+    import pandas as pd
 
-    col1.metric("🌳 Canopy", f"{canopy:.2f}%")
-    col2.metric("☁️ Sky", f"{sky:.2f}%")
-    col3.metric("Threshold Used", f"{used_threshold:.1f}")
+    results = pd.DataFrame(
+        {
+            "Metric": ["Canopy (%)", "Sky (%)", "Threshold"],
+            "Value": [
+                round(canopy, 2),
+                round(sky, 2),
+                round(float(used_threshold), 1),
+            ],
+        }
+    )
 
-    st.divider()
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.image(image, caption="Original", use_container_width=True)
-
-    with c2:
-        st.image(binary, caption="Binary Image", use_container_width=True)
-
-    with c3:
-        st.image(overlay, caption="Canopy Overlay", use_container_width=True)
-    st.divider()
-st.subheader("Download Results")
-
-# ------------------------
-# CSV summary
-# ------------------------
-
-results = pd.DataFrame(
-    {
-        "Metric": ["Canopy (%)", "Sky (%)", "Threshold"],
-        "Value": [
-            round(canopy, 2),
-            round(sky, 2),
-            round(float(used_threshold), 1),
-        ],
-    }
-)
+    st.dataframe(results)
 
 csv = results.to_csv(index=False).encode("utf-8")
 
