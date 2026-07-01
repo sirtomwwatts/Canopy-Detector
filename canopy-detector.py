@@ -1,47 +1,45 @@
+import streamlit as st
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
+import io
+import pandas as pd
 
 
-def calculate_canopy_cover(image_path, threshold="otsu", show_plots=True):
+def calculate_canopy_cover(image, threshold="otsu"):
     """
-    Calculate canopy cover from an upward-looking forest image.
+    Calculate canopy cover from an image.
 
     Parameters
     ----------
-    image_path : str
-        Path to the local image.
-    threshold : int or "otsu", optional
-        Threshold value (0-255) or "otsu" for automatic thresholding.
-    show_plots : bool, optional
-        Whether to display the images.
+    image : numpy.ndarray
+        RGB image.
+    threshold : int or "otsu"
 
     Returns
     -------
-    canopy_percent : float
-    sky_percent : float
-    binary : ndarray
+    canopy_percent
+    sky_percent
+    binary
+    overlay
+    used_threshold
     """
 
-    # Load image
-    img = cv2.imread(image_path)
+    # Convert RGB -> BGR for OpenCV
+    img = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-    if img is None:
-        raise FileNotFoundError(f"Cannot load image: {image_path}")
+    rgb = image.copy()
 
-    # Convert for plotting
-    rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    # Convert to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Threshold
-    if isinstance(threshold, str) and threshold.lower() == "otsu":
+    # Thresholding
+    if threshold == "otsu":
         used_threshold, binary = cv2.threshold(
             gray,
             0,
             255,
-            cv2.THRESH_BINARY + cv2.THRESH_OTSU
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU,
         )
     else:
         used_threshold = threshold
@@ -49,10 +47,10 @@ def calculate_canopy_cover(image_path, threshold="otsu", show_plots=True):
             gray,
             threshold,
             255,
-            cv2.THRESH_BINARY
+            cv2.THRESH_BINARY,
         )
 
-    # Count pixels
+    # Calculate percentages
     sky_pixels = np.count_nonzero(binary == 255)
     canopy_pixels = np.count_nonzero(binary == 0)
     total_pixels = binary.size
@@ -60,37 +58,158 @@ def calculate_canopy_cover(image_path, threshold="otsu", show_plots=True):
     sky_percent = 100 * sky_pixels / total_pixels
     canopy_percent = 100 * canopy_pixels / total_pixels
 
-    print(f"Threshold used: {used_threshold:.1f}")
-    print(f"Canopy: {canopy_percent:.2f}%")
-    print(f"Sky: {sky_percent:.2f}%")
-
-    # Create overlay
+    # Overlay
     overlay = rgb.copy()
     overlay[binary == 0] = [0, 255, 0]
 
     alpha = 0.4
-    result = cv2.addWeighted(rgb, 1 - alpha, overlay, alpha, 0)
+    result = cv2.addWeighted(
+        rgb,
+        1 - alpha,
+        overlay,
+        alpha,
+        0,
+    )
 
-    # Display
-    if show_plots:
-        plt.figure(figsize=(14, 6))
+    return (
+        canopy_percent,
+        sky_percent,
+        binary,
+        result,
+        used_threshold,
+    )
 
-        plt.subplot(1, 3, 1)
-        plt.imshow(rgb)
-        plt.title("Original")
-        plt.axis("off")
 
-        plt.subplot(1, 3, 2)
-        plt.imshow(binary, cmap="gray")
-        plt.title(f"Threshold = {used_threshold:.1f}")
-        plt.axis("off")
+# -------------------------------------------------------
+# Streamlit interface
+# -------------------------------------------------------
 
-        plt.subplot(1, 3, 3)
-        plt.imshow(result)
-        plt.title("Canopy Overlay")
-        plt.axis("off")
+st.set_page_config(
+    page_title="Canopy Cover Calculator",
+    layout="wide",
+)
 
-        plt.tight_layout()
-        plt.show()
+st.title("🌳 Canopy Cover Calculator")
 
-    return canopy_percent, sky_percent, binary
+st.write(
+    "Upload an upward-looking canopy photograph to estimate "
+    "canopy and sky cover."
+)
+
+uploaded_file = st.file_uploader(
+    "Choose an image",
+    type=["jpg", "jpeg", "png", "tif", "tiff"],
+)
+
+if uploaded_file is not None:
+
+    image = Image.open(uploaded_file).convert("RGB")
+    image = np.array(image)
+
+    st.sidebar.header("Settings")
+
+    method = st.sidebar.radio(
+        "Threshold Method",
+        ["Otsu (Automatic)", "Manual"],
+    )
+
+    if method == "Manual":
+        threshold = st.sidebar.slider(
+            "Threshold",
+            min_value=0,
+            max_value=255,
+            value=220,
+        )
+    else:
+        threshold = "otsu"
+
+    (
+        canopy,
+        sky,
+        binary,
+        overlay,
+        used_threshold,
+    ) = calculate_canopy_cover(image, threshold)
+
+    st.subheader("Results")
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("🌳 Canopy", f"{canopy:.2f}%")
+    col2.metric("☁️ Sky", f"{sky:.2f}%")
+    col3.metric("Threshold Used", f"{used_threshold:.1f}")
+
+    st.divider()
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.image(image, caption="Original", use_container_width=True)
+
+    with c2:
+        st.image(binary, caption="Binary Image", use_container_width=True)
+
+    with c3:
+        st.image(overlay, caption="Canopy Overlay", use_container_width=True)
+    st.divider()
+st.subheader("Download Results")
+
+# ------------------------
+# CSV summary
+# ------------------------
+
+results = pd.DataFrame(
+    {
+        "Metric": [
+            "Canopy (%)",
+            "Sky (%)",
+            "Threshold",
+        ],
+        "Value": [
+            round(canopy, 2),
+            round(sky, 2),
+            round(float(used_threshold), 1),
+        ],
+    }
+)
+
+csv = results.to_csv(index=False).encode("utf-8")
+
+st.download_button(
+    label="📄 Download Results (CSV)",
+    data=csv,
+    file_name="canopy_results.csv",
+    mime="text/csv",
+)
+
+# ------------------------
+# Overlay image
+# ------------------------
+
+overlay_pil = Image.fromarray(overlay)
+
+overlay_buffer = io.BytesIO()
+overlay_pil.save(overlay_buffer, format="PNG")
+
+st.download_button(
+    label="🌳 Download Canopy Overlay",
+    data=overlay_buffer.getvalue(),
+    file_name="canopy_overlay.png",
+    mime="image/png",
+)
+
+# ------------------------
+# Binary image
+# ------------------------
+
+binary_pil = Image.fromarray(binary)
+
+binary_buffer = io.BytesIO()
+binary_pil.save(binary_buffer, format="PNG")
+
+st.download_button(
+    label="⚫ Download Binary Image",
+    data=binary_buffer.getvalue(),
+    file_name="binary_image.png",
+    mime="image/png",
+)
