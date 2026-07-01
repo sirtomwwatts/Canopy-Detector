@@ -143,39 +143,51 @@ if uploaded_file is not None:
 
     st.dataframe(results)
 
-    # -------------------------
-    # DOWNLOADS (MUST BE INSIDE)
-    # -------------------------
+# -------------------------
+# DISPLAY IMAGES SIDE BY SIDE
+# -------------------------
 
-    csv = results.to_csv(index=False).encode("utf-8")
+st.subheader("Visualisation")
 
-    st.download_button(
-        label="📄 Download Results (CSV)",
-        data=csv,
-        file_name="canopy_results.csv",
-        mime="text/csv",
-    )
+col1, col2 = st.columns(2)
 
-    # Overlay image
-    overlay_pil = Image.fromarray(overlay)
-    overlay_buffer = io.BytesIO()
-    overlay_pil.save(overlay_buffer, format="PNG")
+with col1:
+    st.image(image, caption="Original Image", use_container_width=True)
 
-    st.download_button(
-        label="🌳 Download Canopy Overlay",
-        data=overlay_buffer.getvalue(),
-        file_name="canopy_overlay.png",
-        mime="image/png",
-    )
+with col2:
+    st.image(binary, caption="Binary Canopy Mask", use_container_width=True)
 
-    # Binary image
-    binary_pil = Image.fromarray(binary)
-    binary_buffer = io.BytesIO()
-    binary_pil.save(binary_buffer, format="PNG")
+# -------------------------
+# OVERLAY VIEW (FULL WIDTH)
+# -------------------------
 
-    st.download_button(
-        label="⚫ Download Binary Image",
-        data=binary_buffer.getvalue(),
-        file_name="binary_image.png",
-        mime="image/png",
-    )
+st.image(overlay, caption="Canopy Overlay (Green = Vegetation)", use_container_width=True)
+
+# -------------------------
+# DOWNLOAD SECTION
+# -------------------------
+
+st.subheader("Download Results")
+
+# CSV
+csv = results.to_csv(index=False).encode("utf-8")
+
+st.download_button(
+    label="📄 Download Results (CSV)",
+    data=csv,
+    file_name="canopy_results.csv",
+    mime="text/csv",
+)
+
+# Overlay image download
+overlay_pil = Image.fromarray(overlay)
+
+overlay_buffer = io.BytesIO()
+overlay_pil.save(overlay_buffer, format="PNG")
+
+st.download_button(
+    label="🌳 Download Overlay Image",
+    data=overlay_buffer.getvalue(),
+    file_name="canopy_overlay.png",
+    mime="image/png",
+)
