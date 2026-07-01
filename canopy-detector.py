@@ -127,12 +127,12 @@ if uploaded_file is not None:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.image(image, caption="Original", use_container_width=True)
+        st.image(image, caption="Original", width="stretch")
 
     with col2:
-        st.image(binary, caption="Binary Mask", use_container_width=True)
+        st.image(binary, caption="Binary Mask", width="stretch")
 
-    st.image(result, caption="Canopy Overlay", use_container_width=True)
+    st.image(result, caption="Canopy Overlay", width="stretch")
 
 
     # =================================================
